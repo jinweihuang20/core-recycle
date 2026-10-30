@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d0f1a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="核心回收" />
+    <title>核心回收 // CORE RUN</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+    <style>html,body{touch-action:manipulation;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-text-size-adjust:100%;background:#0d0f1a;width:100%;height:100dvh;margin:0;overflow:hidden}.hidden{display:none!important}#app{opacity:0}html.ready #app{opacity:1}</style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Oxanium:wght@500;700;800&display=swap" rel="stylesheet" />
+    <script type="module" crossorigin src="./assets/index-CPELVyNd.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/three-GF4xMMcX.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-BOZIlOpc.css">
+  </head>
+  <body>
+    <div id="app">
+      <div id="hud" class="hidden">
+        <div class="hud-tl hud-plate">
+          <div class="sector"><span id="hud-sector">S-01</span><span id="hud-zone">霓虹街區</span></div>
+          <div class="wave-row">
+            <span class="wave-label">WAVE</span><b id="wave">1</b>
+            <span id="hud-event" class="event hidden"></span>
+          </div>
+          <div id="hud-waveprog" class="wave-prog"><span>本波</span><b id="hud-waveprog-text">0 / 0</b></div>
+          <div id="hud-bounty" class="bounty">無傷獎勵 · 進行中</div>
+        </div>
+
+        <div class="hud-tr hud-plate">
+          <div id="fps" class="fps hidden">— FPS</div>
+          <div class="stat"><span>SCORE</span><b id="score">0</b></div>
+          <div class="stat"><span>剩餘敵人</span><b id="enemies-left">0</b></div>
+          <div class="stat core"><span>核心</span><b id="hud-cores">0</b></div>
+          <div id="autofire"></div>
+          <div id="merc-hud" class="merc-hud hidden"></div>
+          <div id="combo" class="hidden">
+            <div class="combo-count"><b id="combo-n">0</b><span>連殺</span></div>
+            <div id="combo-mult"></div>
+            <div class="combo-timer"><div id="combo-fill"></div></div>
+          </div>
+        </div>
+
+        <div class="hud-bl hud-plate">
+          <div id="upgrade-list"></div>
+          <div class="loadout"><span id="hud-weapon">PR-7 脈衝步槍</span><span id="hud-armor">MK-I 標準戰甲</span></div>
+          <div class="gauge shield">
+            <div id="shield-lost" class="fill lost"></div>
+            <div id="shield-fill" class="fill"></div>
+            <span id="shield-text" class="label"></span>
+          </div>
+          <div class="gauge hp">
+            <div id="hp-lost" class="fill lost"></div>
+            <div id="hp-fill" class="fill"></div>
+            <span id="hp-text" class="label"></span>
+          </div>
+          <div class="gauge-row">
+            <div class="gauge mini"><div id="dash-fill" class="fill"></div><span class="label">DASH</span></div>
+            <div id="ult-bar" class="gauge mini ult"><div id="ult-fill" class="fill"></div><span id="ult-text" class="label"></span></div>
+          </div>
+        </div>
+
+        <div id="boss-bar" class="hidden">
+          <div class="name"><span id="boss-name">BOSS</span><span id="boss-rage" class="hidden">// 狂暴</span></div>
+          <div class="gauge boss"><div id="boss-fill" class="fill"></div></div>
+        </div>
+
+        <div id="controls-hint" class="controls-hint"></div>
+        <div id="offscreen"></div>
+        <div id="announce"></div>
+        <div id="zone-intro"></div>
+        <div id="hint" class="hidden"></div>
+        <div id="jam-arrow" class="hidden">➤</div>
+        <div id="gate-warn" class="hidden">霓虹閘門！往前後閃</div>
+        <div id="void-warn" class="hidden"><span id="void-arrow">➜</span>回到安全圈內！</div>
+      </div>
+      <!-- Outside #hud so menu toasts (redeem, armory) are visible; .menu-mode lifts it above overlays. -->
+      <div id="toasts" class="menu-mode"></div>
+      <div id="dash-ring" class="hidden" aria-hidden="true"></div>
+      <div id="tutorial" class="hidden" role="status" aria-live="polite">
+        <div class="tut-kicker">新手教學</div>
+        <div class="tut-title">移動</div>
+        <div class="tut-body"></div>
+        <button type="button" id="tut-skip" class="tut-skip">跳過教學</button>
+      </div>
+      <div id="tut-zone" class="hidden"></div>
+      <div id="back-toast" class="hidden">再按一次返回鍵離開遊戲</div>
+      <div id="touch-layer" class="hidden">
+        <div id="stick-move" class="vstick hidden">
+          <div class="vstick-base"></div>
+          <div class="vstick-knob"></div>
+        </div>
+        <div id="stick-aim" class="vstick hidden">
+          <div class="vstick-base"></div>
+          <div class="vstick-knob"></div>
+        </div>
+        <div id="touch-actions">
+          <button type="button" id="touch-dash" class="touch-btn dash ready">
+            <span class="touch-ring"></span>
+            <span class="touch-label">衝刺</span>
+          </button>
+          <button type="button" id="touch-ult" class="touch-btn ult">
+            <span class="touch-ring"></span>
+            <span class="touch-fill"></span>
+            <span class="touch-label">大招</span>
+            <span class="touch-pct">0%</span>
+          </button>
+          <button type="button" id="touch-auto" class="touch-btn">自動</button>
+          <button type="button" id="touch-pause" class="touch-btn">暫停</button>
+        </div>
+      </div>
+      <div id="rotate-hint" class="hidden">
+        <div class="rotate-card">
+          <div class="rotate-icon" aria-hidden="true"></div>
+          <div class="rotate-title">建議橫向遊玩</div>
+          <p>橫向時視野更廣，敵人比較不會從畫面外靠近。直向也能打，相機會再拉遠一點。</p>
+          <button type="button" id="rotate-dismiss" class="btn primary">繼續直向</button>
+        </div>
+      </div>
+      <div id="damage-vignette"></div>
+      <div id="void-vignette"></div>
+      <div id="ult-flash"></div>
+      <div id="ult-banner" aria-hidden="true"><div class="ub-band"></div><div class="ub-text"><div class="ub-sub"></div><div class="ub-name"></div></div></div>
+
+      <div id="overlay-menu" class="overlay menu">
+        <div class="menu-shell">
+        <header class="menu-top">
+          <div class="brand">
+            <div class="brand-code">CR-26 // CORE RUN PROGRAM</div>
+            <h1>核心回收</h1>
+            <p class="brand-sub">把核心帶回來。</p>
+          </div>
+          <nav class="tabs">
+            <button data-tab="deploy" class="tab active">出擊</button>
+            <button data-tab="armory" class="tab">軍械庫</button>
+            <button data-tab="records" class="tab">戰績</button>
+            <button data-tab="codex" class="tab">圖鑑</button>
+          </nav>
+          <div class="wallet"><span>核心</span><b id="menu-cores">0</b><button type="button" id="btn-redeem" class="redeem-open">兌換代碼</button><button type="button" id="btn-controls" class="redeem-open">操作說明</button><button type="button" id="btn-settings" class="redeem-open settings-open">設定</button></div>
+        </header>
+
+        <section id="tab-deploy" class="tab-page">
+          <div class="deploy">
+            <div class="panel-title">目前配置</div>
+            <div id="deploy-loadout" class="loadout-cards"></div>
+            <div class="deploy-launch">
+              <div class="panel-title">出擊區域 <span class="panel-hint">1–0 選擇 · ←→ 換章</span></div>
+              <div id="sector-pick" class="sector-pick"></div>
+              <button id="btn-start" class="btn primary launch">
+                <span class="launch-copy">
+                  <span class="launch-kicker">出擊</span>
+                  <b id="launch-zone">霓虹街區</b>
+                </span>
+                <small id="launch-meta">第 1 波 · ENTER</small>
+              </button>
+            </div>
+            <div id="hunt-block">
+              <div class="panel-title">這局目標 <span class="panel-hint">達成可領核心</span></div>
+              <div id="hunt-list" class="hunts"></div>
+            </div>
+            <div id="menu-best" class="best"></div>
+          </div>
+        </section>
+
+        <section id="tab-armory" class="tab-page hidden">
+          <div class="armory-layout">
+            <div id="armory-list" class="armory-list">
+              <nav id="arm-tabs" class="arm-tabs" role="tablist" aria-label="軍械庫分類">
+                <button type="button" class="arm-tab" role="tab" data-sec="weapons">武器</button>
+                <button type="button" class="arm-tab" role="tab" data-sec="armors">裝甲</button>
+                <button type="button" class="arm-tab" role="tab" data-sec="skins">造型</button>
+                <button type="button" class="arm-tab" role="tab" data-sec="mercs">傭兵</button>
+                <button type="button" class="arm-tab" role="tab" data-sec="relics">遺物</button>
+              </nav>
+              <div class="arm-pane" data-pane="weapons" role="tabpanel">
+                <div class="panel-title" id="armory-sec-weapons">武器　購買後可用核心永久強化</div>
+                <div id="armory-weapons" class="armory-grid"></div>
+              </div>
+              <div class="arm-pane" data-pane="armors" role="tabpanel">
+                <div class="panel-title" id="armory-sec-armors">裝甲</div>
+                <div id="armory-armors" class="armory-grid"></div>
+              </div>
+              <div class="arm-pane" data-pane="skins" role="tabpanel">
+                <div class="panel-title" id="armory-sec-skins">造型　只改外觀，不影響數值</div>
+                <div id="armory-skins" class="armory-grid"></div>
+              </div>
+              <div class="arm-pane" data-pane="mercs" role="tabpanel">
+                <div class="panel-title" id="armory-sec-mercs">傭兵　以核心僱用，同類型可重複購買</div>
+                <p id="merc-cap-note" class="armory-note">出擊時最多帶 6 名傭兵。倒下的同伴會在下一波站起來。</p>
+                <div id="armory-mercs" class="armory-grid"></div>
+              </div>
+              <div class="arm-pane" data-pane="relics" role="tabpanel">
+                <div class="panel-title" id="armory-sec-relics">遺物　成就解鎖，不能購買</div>
+                <div id="armory-relics" class="armory-grid"></div>
+              </div>
+            </div>
+            <aside id="armory-range" class="armory-range">
+              <div class="range-head">
+                <div class="range-kicker">試射場</div>
+                <button type="button" id="range-expand" class="range-expand touch-only" aria-expanded="false">展開預覽</button>
+              </div>
+              <div class="range-copy">
+                <div id="range-weapon" class="range-weapon">滑過武器卡片即可試射</div>
+                <div id="range-ult" class="range-ult"></div>
+                <div id="range-stats" class="range-stats hidden"></div>
+                <div class="range-hint">射擊會自動循環 · 大招稍後施放</div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="tab-records" class="tab-page hidden">
+          <div id="records-totals" class="totals"></div>
+          <div class="panel-title">成就 <span id="ach-count"></span></div>
+          <div id="achievement-list" class="ach-grid"></div>
+        </section>
+
+        <section id="tab-codex" class="tab-page hidden">
+          <div class="panel-title">敵性目標 <span id="codex-count"></span></div>
+          <div id="codex-list" class="codex-grid"></div>
+        </section>
+        </div>
+      </div>
+
+      <div id="overlay-upgrade" class="overlay hidden">
+        <div class="overlay-head"><span class="code">FIELD UPGRADE</span><h2>選擇強化</h2></div>
+        <div id="upgrade-cards"></div>
+        <p id="upgrade-hint" class="hint">點擊卡片，或按 <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd></p>
+      </div>
+
+      <div id="overlay-pause" class="overlay hidden">
+        <div class="overlay-head"><span class="code">PAUSED</span><h2>暫停</h2></div>
+        <div class="btn-col">
+          <button id="btn-resume" class="btn primary">繼續</button>
+          <button type="button" id="btn-pause-controls" class="btn ghost">操作說明</button>
+          <button type="button" id="btn-pause-settings" class="btn ghost">設定</button>
+          <button id="btn-abandon" class="btn ghost">放棄任務</button>
+        </div>
+      </div>
+
+      <div id="overlay-gameover" class="overlay hidden">
+        <div class="report">
+          <div class="overlay-head"><span class="code" id="go-code">MISSION REPORT</span><h2>任務結束</h2></div>
+          <div class="report-grid">
+            <div><span>抵達</span><b id="go-wave"></b></div>
+            <div><span>分數</span><b id="go-score"></b></div>
+            <div><span>擊殺</span><b id="go-kills"></b></div>
+            <div><span>最高連殺</span><b id="go-combo"></b></div>
+          </div>
+          <div id="go-new" class="new-best hidden">新紀錄</div>
+          <div id="go-progress" class="go-progress"></div>
+          <div id="go-cores" class="ledger"></div>
+          <div id="go-next" class="go-next"></div>
+          <details id="go-dmg" class="go-dmg" open></details>
+          <div id="go-ach" class="go-ach"></div>
+          <div class="btn-row">
+            <button id="btn-restart" class="btn primary">再次出擊<small>ENTER</small></button>
+            <button id="btn-base" class="btn ghost">返回基地</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="redeem-panel" class="redeem-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="redeem-title">
+        <form id="redeem-form" class="redeem-card" autocomplete="off" novalidate>
+          <div class="redeem-head"><span class="code">REDEEM CODE</span><h2 id="redeem-title">兌換代碼</h2></div>
+          <input
+            id="redeem-input"
+            class="redeem-input"
+            type="text"
+            name="redeem-code"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="go"
+            maxlength="64"
+            placeholder="輸入兌換代碼"
+            aria-label="兌換代碼"
+          />
+          <div id="redeem-msg" class="redeem-msg" role="status" aria-live="polite"></div>
+          <div class="redeem-actions">
+            <button type="submit" id="redeem-submit" class="btn primary">兌換</button>
+            <button type="button" id="redeem-cancel" class="btn ghost">取消</button>
+          </div>
+        </form>
+      </div>
+      <div id="controls-panel" class="redeem-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="controls-title">
+        <div class="redeem-card controls-card">
+          <div class="redeem-head"><span class="code">CONTROLS</span><h2 id="controls-title">操作說明</h2></div>
+          <div id="controls-desktop" class="tut-grid tut-desktop"></div>
+          <div class="tut-grid tut-touch">
+            <div><kbd>左搖桿</kbd><span>移動</span></div>
+            <div><kbd>右搖桿</kbd><span>瞄準／射擊</span></div>
+            <div><kbd>衝刺</kbd><span>右側按鈕</span></div>
+            <div><kbd>大招</kbd><span>蓄滿後點擊</span></div>
+            <div><kbd>自動</kbd><span>自動射擊／鎖定</span></div>
+            <div><kbd>暫停</kbd><span>右側按鈕／手機返回鍵</span></div>
+            <div><kbd>強化</kbd><span>波次結束點卡片</span></div>
+          </div>
+          <p class="settings-note">消滅每一波敵人 → 三選一強化 → 繼續推進。擊倒敵人會蓄能大招。地面青色光環就是你；青色地面帶亮起時，閘門即將掃過，往前後閃。</p>
+          <div class="redeem-actions">
+            <button type="button" id="controls-replay" class="btn ghost">重看新手教學</button>
+            <button type="button" id="controls-guide" class="btn ghost">重看主畫面導覽</button>
+            <button type="button" id="controls-close" class="btn primary">返回</button>
+          </div>
+        </div>
+      </div>
+      <div id="settings-panel" class="redeem-backdrop settings-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="redeem-card settings-card">
+          <div class="redeem-head"><span class="code">SETTINGS</span><h2 id="settings-title">設定</h2></div>
+          <section class="settings-section">
+            <h3>畫質</h3>
+            <div class="settings-row">
+              <span class="settings-label">畫面品質</span>
+              <div class="set-group">
+                <button type="button" data-quality="low">低</button>
+                <button type="button" data-quality="high">高</button>
+              </div>
+            </div>
+            <p class="settings-note">高：泛光、即時陰影、抗鋸齒；低：較省電、適合舊手機。</p>
+            <label class="settings-row set-check"><span class="settings-label">顯示 FPS</span><input type="checkbox" data-fps /></label>
+            <label class="settings-row set-check"><span class="settings-label">減少閃光</span><input type="checkbox" data-reduce-flash /></label>
+            <p class="settings-note">進一步降低泛光、受擊火花、受傷與大招的畫面閃光，角色受傷時也不閃爍。</p>
+            <div class="settings-row" data-fullscreen-row>
+              <span class="settings-label">全螢幕</span>
+              <button type="button" data-fullscreen class="set-extra">切換全螢幕</button>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h3>操作</h3>
+            <div class="settings-row">
+              <span class="settings-label">按鍵與觸控操作</span>
+              <button type="button" id="btn-settings-controls" class="set-extra">操作說明</button>
+            </div>
+          </section>
+          <section class="settings-section keybind-section">
+            <h3>按鍵設定</h3>
+            <p class="settings-note">點一下按鍵格，再按想要的鍵；<kbd>Esc</kbd> 取消。已被使用的鍵會互換。滑鼠左鍵射擊、右鍵衝刺固定可用。</p>
+            <div id="keybind-list" class="keybind-list"></div>
+            <div id="keybind-msg" class="settings-note keybind-msg" role="status" aria-live="polite"></div>
+            <div class="settings-row"><span class="settings-label"></span><button type="button" id="keybind-reset" class="set-extra">恢復預設</button></div>
+          </section>
+          <section class="settings-section">
+            <h3>音效</h3>
+            <div class="settings-row">
+              <span class="settings-label">音效與音樂</span>
+              <div class="set-group">
+                <button type="button" data-mute="off">開</button>
+                <button type="button" data-mute="on">靜音</button>
+              </div>
+            </div>
+            <p class="settings-note">遊戲中也可以按 <kbd>M</kbd> 快速切換靜音。</p>
+            <div id="update-row" class="settings-row hidden">
+              <span class="settings-label">版本 <b id="app-version">v?</b></span>
+              <div class="update-box">
+                <button type="button" id="btn-check-update" class="set-extra">檢查更新</button>
+                <span id="update-status" class="update-status"></span>
+              </div>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h3>隱私</h3>
+            <label class="settings-row set-check"><span class="settings-label">匿名遊玩數據</span><input type="checkbox" data-stats /></label>
+            <p class="settings-note">只傳送隨機匿名代號、遊玩時間、波數與區域，伺服器會依網路推估大概的國家／城市（不儲存 IP），用來改善關卡難度，不含任何個人資料。</p>
+          </section>
+          <div class="redeem-actions">
+            <button type="button" id="settings-close" class="btn primary">返回</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
